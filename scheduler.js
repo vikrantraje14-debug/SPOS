@@ -1,7 +1,7 @@
 /* Pure scheduling engine. No browser UI or external dependencies. */
 (function (root) {
   "use strict";
-  const ALGORITHMS = ["fcfs", "sjf", "priority", "rr"];
+  const ALGORITHMS = ["fcfs", "sjf", "srtf", "priority", "priority-preemptive", "rr"];
 
   function integer(value, min, max, label) {
     // Do not coerce strings: the UI must explicitly parse complete inputs.
@@ -24,7 +24,7 @@
       ids.add(p.id);
       integer(p.arrival, 0, 1000, `${p.id} arrival time`);
       integer(p.burst, 1, 100, `${p.id} burst time`);
-      if (algorithm === "priority") integer(p.priority, 1, 100, `${p.id} priority`);
+      if (algorithm === "priority" || algorithm === "priority-preemptive") integer(p.priority, 1, 100, `${p.id} priority`);
     });
     if (algorithm === "rr") integer(quantum, 1, 100, "Time quantum");
   }
@@ -63,8 +63,10 @@
     const pending = processes.map((p, order) => ({ ...p, order, remaining: p.burst })).sort(arrivalOrder);
     const timeline = [];
     let time = 0;
-    const append = (processId, duration) => {
-      timeline.push({ processId, start: time, end: time + duration });
+    const append = (processId, duration, merge = false) => {
+      const prior = timeline[timeline.length - 1];
+      if (merge && prior && prior.processId === processId && prior.end === time) prior.end += duration;
+      else timeline.push({ processId, start: time, end: time + duration });
       time += duration;
     };
 
@@ -87,6 +89,33 @@
         // Endpoint arrivals enter before the running process returns to the queue.
         enqueueArrivals();
         if (process.remaining > 0) ready.push(process);
+      }
+    } else if (algorithm === "srtf" || algorithm === "priority-preemptive") {
+      const ready = [];
+      let next = 0;
+      let current = null;
+      const key = process => algorithm === "srtf" ? process.remaining : process.priority;
+      while (current || next < pending.length || ready.length) {
+        while (next < pending.length && pending[next].arrival <= time) ready.push(pending[next++]);
+        ready.sort((a, b) => key(a) - key(b) || arrivalOrder(a, b));
+        // A tie never interrupts the CPU. Arrival/order ties apply only when
+        // choosing from the queue after completion or a strict preemption.
+        if (!current) current = ready.shift() || null;
+        else if (ready.length && key(ready[0]) < key(current)) {
+          ready.push(current);
+          current = ready.shift();
+        }
+        if (!current) {
+          append(null, pending[next].arrival - time);
+          continue;
+        }
+        const nextArrival = next < pending.length ? pending[next].arrival : Infinity;
+        const duration = Math.min(current.remaining, nextArrival - time);
+        // Re-evaluate at each arrival, but merge uninterrupted execution so
+        // the Gantt chart shows actual interruptions, not artificial slices.
+        append(current.id, duration, true);
+        current.remaining -= duration;
+        if (current.remaining === 0) current = null;
       }
     } else {
       while (pending.length) {

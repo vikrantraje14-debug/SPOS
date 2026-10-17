@@ -3,7 +3,7 @@
   "use strict";
   const { simulate } = root.CPUScheduler;
   const results = [];
-  const modes = ["fcfs", "sjf", "priority", "rr"];
+  const modes = ["fcfs", "sjf", "srtf", "priority", "priority-preemptive", "rr"];
   const p = (id, arrival, burst, priority = 1) => ({ id, arrival, burst, priority });
   const fixture = [p("P1", 0, 5, 2), p("P2", 1, 3, 1), p("P3", 2, 1, 3)];
   function equal(actual, expected, message = "Values differ") {
@@ -179,7 +179,7 @@
     [[], null, {}, Array.from({ length: 21 }, (_, i) => p(`P${i}`, 0, 1))].forEach(input => throws(() => simulate(input, "fcfs"), "1 and 20"));
   });
   test("Validation: unsupported algorithm and invalid process objects", () => {
-    throws(() => simulate(fixture, "srtf"), "supported");
+    throws(() => simulate(fixture, "unknown"), "supported");
     throws(() => simulate([null], "fcfs"), "object");
   });
   test("Validation: empty and duplicate process IDs", () => {
@@ -315,6 +315,100 @@
         assert(!f.ready.includes(f.runningId), "Running process cannot be in the ready queue.");
       }
     });
+  });
+
+  test("SRTF: repeated interruptions, resumption and final metrics", () => {
+    const r = simulate(fixture, "srtf");
+    equal(timeline(r), [["P1", 0, 1], ["P2", 1, 2], ["P3", 2, 3], ["P2", 3, 5], ["P1", 5, 9]]);
+    checkMetrics(r, [[0, 9, 9, 4, 0], [1, 5, 4, 1, 0], [2, 3, 1, 0, 0]]);
+    equal(r.averages, { turnaround: 14 / 3, waiting: 5 / 3, response: 0 });
+  });
+  test("SRTF: a longer arrival does not split uninterrupted execution", () => {
+    const r = simulate([p("A", 0, 4), p("B", 1, 8)], "srtf");
+    equal(timeline(r), [["A", 0, 4], ["B", 4, 12]]);
+    checkMetrics(r, [[0, 4, 4, 0, 0], [4, 12, 11, 3, 3]]);
+  });
+  test("SRTF: equal remaining time keeps the running process", () => {
+    const r = simulate([p("A", 0, 5), p("B", 2, 3)], "srtf");
+    equal(timeline(r), [["A", 0, 5], ["B", 5, 8]]);
+    checkMetrics(r, [[0, 5, 5, 0, 0], [5, 8, 6, 3, 3]]);
+  });
+  test("SRTF: shortest remaining time is different from original burst", () => {
+    const input = [p("A", 0, 10), p("B", 6, 2), p("C", 7, 5)];
+    const r = simulate(input, "srtf");
+    equal(timeline(r), [["A", 0, 6], ["B", 6, 8], ["A", 8, 12], ["C", 12, 17]]);
+    checkMetrics(r, [[0, 12, 12, 2, 0], [6, 8, 2, 0, 0], [12, 17, 10, 5, 5]]);
+    equal(root.CPUPlayback.create(input, r, "srtf").frame(7.5).ready, ["A", "C"]);
+  });
+  test("Preemptive Priority: higher priority interrupts and unfinished work resumes", () => {
+    const r = simulate(fixture, "priority-preemptive");
+    equal(timeline(r), [["P1", 0, 1], ["P2", 1, 4], ["P1", 4, 8], ["P3", 8, 9]]);
+    checkMetrics(r, [[0, 8, 8, 3, 0], [1, 4, 3, 0, 0], [8, 9, 7, 6, 6]]);
+    equal(r.averages, { turnaround: 6, waiting: 3, response: 2 });
+  });
+  test("Preemptive Priority: equal or lower priority does not interrupt", () => {
+    const r = simulate([p("A", 0, 4, 2), p("B", 1, 1, 2), p("C", 2, 1, 3)], "priority-preemptive");
+    equal(timeline(r), [["A", 0, 4], ["B", 4, 5], ["C", 5, 6]]);
+    checkMetrics(r, [[0, 4, 4, 0, 0], [4, 5, 4, 3, 3], [5, 6, 4, 3, 3]]);
+  });
+  test("Preemptive Priority: nested interruptions retain exact remaining bursts", () => {
+    const input = [p("A", 0, 6, 3), p("B", 1, 4, 2), p("C", 2, 1, 1)];
+    const r = simulate(input, "priority-preemptive");
+    equal(timeline(r), [["A", 0, 1], ["B", 1, 2], ["C", 2, 3], ["B", 3, 6], ["A", 6, 11]]);
+    checkMetrics(r, [[0, 11, 11, 5, 0], [1, 6, 5, 1, 0], [2, 3, 1, 0, 0]]);
+  });
+  ["srtf", "priority-preemptive"].forEach(mode => {
+    test(`${mode}: simultaneous arrivals choose correctly without a zero-length turn`, () => {
+      const input = [p("A", 0, 5, 3), p("B", 0, 2, 1), p("C", 0, 3, 2)];
+      const r = simulate(input, mode);
+      equal(timeline(r), [["B", 0, 2], ["C", 2, 5], ["A", 5, 10]]);
+      invariants(input, r);
+    });
+    test(`${mode}: completion exactly at an arrival is not a preemption`, () => {
+      const input = [p("A", 0, 2, 3), p("B", 2, 1, 1)];
+      const r = simulate(input, mode);
+      equal(timeline(r), [["A", 0, 2], ["B", 2, 3]]);
+      const f = root.CPUPlayback.create(input, r, mode).frame(2);
+      equal(f.states.map(p => p.state), ["completed", "running"]);
+      assert(!f.events.some(event => event.type === "preempt"), "A finished process cannot be preempted.");
+    });
+    test(`${mode}: every executed unit satisfies the scheduling policy across 60 workloads`, () => {
+      for (let trial = 0; trial < 60; trial++) {
+        const input = Array.from({ length: 6 }, (_, i) => p(`X${i}`, (trial * 7 + i * 11) % 15, (trial + i * 3) % 10 + 1, (trial + i * 5) % 4 + 1));
+        const r = simulate(input, mode);
+        const used = new Map(input.map(process => [process.id, 0]));
+        r.timeline.forEach(segment => {
+          for (let time = segment.start; time < segment.end; time++) {
+            if (segment.processId === null) continue;
+            const current = input.find(process => process.id === segment.processId);
+            const currentKey = mode === "srtf" ? current.burst - used.get(current.id) : current.priority;
+            input.filter(process => process.arrival <= time && used.get(process.id) < process.burst).forEach(process => {
+              const key = mode === "srtf" ? process.burst - used.get(process.id) : process.priority;
+              assert(currentKey <= key, "CPU ignored a strictly better ready process.");
+            });
+            used.set(current.id, used.get(current.id) + 1);
+          }
+        });
+        invariants(input, r);
+      }
+    });
+    test(`Playback ${mode}: interrupted process is ready with its exact remaining work`, () => {
+      const input = [p("A", 0, 5, 3), p("B", 1, 2, 1)];
+      const r = simulate(input, mode);
+      const f = root.CPUPlayback.create(input, r, mode).frame(1);
+      equal(f.runningId, "B");
+      equal(f.ready, ["A"]);
+      equal(f.states.map(p => [p.state, p.remaining]), [["ready", 4], ["running", 2]]);
+      const event = f.events.find(event => event.type === "preempt");
+      assert(event && event.text.includes("A was preempted by B"), "Missing interruption explanation.");
+      equal(f.events.slice(-3).map(event => event.type), ["arrival", "preempt", "dispatch"]);
+    });
+  });
+  test("Validation: preemptive Priority validates priority while SRTF ignores it", () => {
+    [undefined, "", 0, -1, 1.5, Infinity, 101].forEach(priority => {
+      throws(() => simulate([{ ...p("A", 0, 1), priority }], "priority-preemptive"), "priority");
+    });
+    simulate([p("A", 0, 1, "ignored")], "srtf", "ignored");
   });
 
   root.CPUTestResults = results;

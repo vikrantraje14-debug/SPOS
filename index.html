@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explore FCFS, SJF, Priority and Round Robin with an offline CPU scheduling simulator.">
+  <meta name="description" content="Explore preemptive and non-preemptive CPU scheduling with FCFS, SJF, SRTF, Priority and Round Robin.">
   <title>Dispatch — CPU Scheduling Lab</title>
   <link rel="stylesheet" href="style.css">
   <script src="scheduler.js" defer></script>
@@ -17,7 +17,7 @@
   </header>
   <main>
     <section class="intro" aria-labelledby="page-title">
-      <div><div class="eyebrow"><span class="status-dot"></span> THE OPERATING SYSTEMS LAB</div><h1 id="page-title">CPU scheduling,<br><span>made visual.</span></h1><p class="intro-copy">Build a workload. Watch every process run.<br class="desktop-break"> Understand the decisions behind the schedule.</p><div class="intro-chips" aria-label="Simulator features"><span>4 scheduling algorithms</span><span>Live process playback</span><span>No setup needed</span></div></div>
+      <div><div class="eyebrow"><span class="status-dot"></span> THE OPERATING SYSTEMS LAB</div><h1 id="page-title">CPU scheduling,<br><span>made visual.</span></h1><p class="intro-copy">Build a workload. Watch every process run.<br class="desktop-break"> Understand the decisions behind the schedule.</p><div class="intro-chips" aria-label="Simulator features"><span>Preemptive &amp; non-preemptive</span><span>Live process playback</span><span>No setup needed</span></div></div>
       <div class="intro-aside"><span class="mini-label">YOUR EXPERIMENT</span><p>One CPU.<br>Four ways to share it.</p><span class="offline-badge"><span class="status-dot"></span> Works entirely offline</span></div>
     </section>
 
@@ -26,6 +26,8 @@
         <div class="panel-heading"><div><span class="step-label">01 / CONFIGURE</span><h2 id="setup-title">Process setup</h2></div><span class="count-badge" id="process-count">3 processes</span></div>
         <form id="simulation-form" novalidate>
           <div class="field"><label for="algorithm">Scheduling algorithm</label><div class="select-wrap"><select id="algorithm" name="algorithm"><option value="fcfs">First Come, First Served</option><option value="sjf">Shortest Job First</option><option value="priority">Priority Scheduling</option><option value="rr">Round Robin</option></select></div></div>
+          <fieldset id="mode-selector" class="mode-switch" hidden><legend>Execution mode</legend><div class="mode-options"><label class="mode-option"><input type="radio" name="execution-mode" id="mode-nonpreemptive" value="nonpreemptive" checked><span>Non-preemptive</span></label><label class="mode-option"><input type="radio" name="execution-mode" id="mode-preemptive" value="preemptive"><span>Preemptive</span></label></div></fieldset>
+          <p class="mode-hint" id="mode-hint">FCFS is non-preemptive: processes finish in arrival order.</p>
           <div class="algorithm-note"><span class="note-symbol" aria-hidden="true">i</span><p id="algorithm-description"></p></div>
           <div class="field quantum-field" id="quantum-field" hidden><label for="quantum">Time quantum <span class="muted">/ time units</span></label><input id="quantum" type="number" min="1" max="100" step="1" value="2" aria-describedby="quantum-error"><span class="field-error" id="quantum-error"></span></div>
           <div class="subheading"><h3>Process queue</h3><button class="link-button" type="button" id="load-example">Load example</button></div>
@@ -50,6 +52,7 @@
               <div class="cpu-shell"><div class="cpu-orbit" aria-hidden="true"></div><div class="cpu-core" id="cpu-core"><span>CPU / 01</span><strong id="cpu-process">Idle</strong><small id="cpu-detail">Waiting for arrival</small></div></div>
             </div>
             <div class="execution-caption"><span class="execution-dot" aria-hidden="true"></span><p id="execution-caption">Getting the workload ready…</p></div>
+            <p class="preemption-note" id="preemption-note" hidden></p>
             <div class="playback-progress"><div id="playback-progress" role="progressbar" aria-label="Simulation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
             <div class="playback-stats"><span id="completed-count">0 completed</span><span id="playback-fraction">0 / 0 time units</span></div>
             <div class="playback-controls"><button type="button" id="pause-playback" class="transport-button">Ⅱ Pause</button><button type="button" id="step-playback" class="transport-button">Next event →</button><label class="speed-control" for="playback-speed">Speed<select id="playback-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option></select></label><button type="button" id="finish-playback" class="finish-button">Skip to results ↗</button></div>
@@ -61,7 +64,7 @@
           <section class="panel timeline-panel" aria-labelledby="timeline-title"><div class="section-heading"><div><h3 id="timeline-title">Execution timeline</h3><p>Watch each allocation fill as the CPU runs.</p></div><span class="small-tag" id="algorithm-tag"></span></div><div class="gantt-scroll" tabindex="0" role="region" aria-label="Scrollable execution timeline"><div id="gantt" class="gantt"></div></div><div class="timeline-footer"><div class="legend" id="legend"></div><label class="follow-control"><input type="checkbox" id="follow-cpu" checked> Follow CPU</label></div><p class="chart-help">Hover or focus a visible block for details. Pause to inspect. Use Next event to jump across idle gaps.</p></section>
           <section class="panel metrics-panel" id="final-breakdown" hidden aria-labelledby="metrics-title"><div class="section-heading"><div><h3 id="metrics-title">Process breakdown</h3><p>Results in your original process order.</p></div></div><div class="table-scroll"><table class="metrics-table"><thead><tr><th scope="col">Process</th><th scope="col">Arrival</th><th scope="col">Burst</th><th scope="col">First start</th><th scope="col">Completion</th><th scope="col">Turnaround</th><th scope="col">Waiting</th><th scope="col">Response</th></tr></thead><tbody id="metrics-body"></tbody></table></div></section>
         </div>
-        <section class="assumptions" aria-labelledby="model-title"><span class="model-icon" aria-hidden="true">▧</span><div><h3 id="model-title">A simple model. Clearer understanding.</h3><p>Single CPU · one burst per process · no I/O · zero context-switch cost · no priority aging. SJF and Priority run each selected process to completion.</p></div></section>
+        <section class="assumptions" aria-labelledby="model-title"><span class="model-icon" aria-hidden="true">▧</span><div><h3 id="model-title">A simple model. Clearer understanding.</h3><p>Single CPU · one burst per process · no I/O · zero context-switch cost · no priority aging. SJF and Priority support both execution modes. FCFS is non-preemptive; Round Robin is preemptive.</p></div></section>
       </section>
     </div>
     <section class="formula-strip" aria-label="Metric formulas"><div><span class="formula-label">TURNAROUND</span><p>Completion − Arrival</p></div><div><span class="formula-label">WAITING</span><p>Turnaround − Burst</p></div><div><span class="formula-label">RESPONSE</span><p>First start − Arrival</p></div><span class="formula-caption">The numbers behind<br>every scheduling decision.</span></section>

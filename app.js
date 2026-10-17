@@ -6,8 +6,10 @@
   const algorithms = {
     fcfs: { short: "FCFS", description: "First in, first out. Processes run to completion in arrival order. Equal arrivals follow your row order." },
     sjf: { short: "SJF · Non-preemptive", description: "The shortest ready burst runs next, to completion. Ties use arrival time, then row order." },
+    srtf: { short: "SRTF · Preemptive", description: "Shortest Remaining Time First: a newly arrived process interrupts the CPU only if its burst is strictly shorter than the running process’s remaining time. Equal remaining times keep the CPU running." },
     priority: { short: "Priority · Non-preemptive", description: "The ready process with the lowest priority number runs to completion. Ties use arrival time, then row order." },
-    rr: { short: "Round Robin", description: "Ready processes take turns in a FIFO queue. Each gets up to one quantum; endpoint arrivals join before the running process returns." }
+    "priority-preemptive": { short: "Priority · Preemptive", description: "A newly arrived process interrupts the CPU only if it has a strictly smaller priority number. Equal priorities keep the running process on the CPU. Interrupted work resumes with its remaining burst." },
+    rr: { short: "Round Robin · Preemptive", description: "Ready processes take turns in a FIFO queue. Each gets up to one quantum; endpoint arrivals join before the running process returns." }
   };
   const palette = [
     ["#e4defc", "#48348c", "#7462c2"], ["#dceafa", "#244f80", "#5183b5"],
@@ -42,6 +44,7 @@
     $("process-board").replaceChildren();
     $("ready-queue").replaceChildren();
     $("activity-feed").replaceChildren();
+    $("preemption-note").hidden = true;
     ["completion-banner", "summary-metrics", "final-breakdown"].forEach(id => { $(id).hidden = true; });
     $("playback-stage").classList.remove("is-playing", "is-paused", "is-complete", "is-idle");
     $("run-label").textContent = "Run simulation";
@@ -59,9 +62,22 @@
 
   function invalidate() { clearResults(); clearErrors(); }
 
+  function selectedAlgorithm() {
+    const family = $("algorithm").value;
+    const preemptive = $("mode-preemptive").checked;
+    if (preemptive && family === "sjf") return "srtf";
+    if (preemptive && family === "priority") return "priority-preemptive";
+    return family;
+  }
+
   function updateAlgorithm() {
     const selected = $("algorithm").value;
-    $("algorithm-description").textContent = algorithms[selected].description;
+    const switchable = selected === "sjf" || selected === "priority";
+    $("mode-selector").hidden = !switchable;
+    $("mode-hint").textContent = switchable
+      ? $("mode-preemptive").checked ? "Preemptive: a better ready process can interrupt the CPU." : "Non-preemptive: each selected process runs to completion."
+      : selected === "rr" ? "Round Robin is preemptive: the time quantum controls CPU turns." : "FCFS is non-preemptive: processes finish in arrival order.";
+    $("algorithm-description").textContent = algorithms[selectedAlgorithm()].description;
     $("quantum-field").hidden = selected !== "rr";
     document.querySelectorAll(".priority-column").forEach(cell => { cell.hidden = selected !== "priority"; });
     $("priority-help").hidden = selected !== "priority";
@@ -139,7 +155,10 @@
     invalidate();
     rows.replaceChildren();
     nextId = 1;
-    if (resetAlgorithm) $("algorithm").value = "fcfs";
+    if (resetAlgorithm) {
+      $("algorithm").value = "fcfs";
+      $("mode-nonpreemptive").checked = true;
+    }
     if (resetAlgorithm) {
       $("playback-speed").value = "1";
       $("follow-cpu").checked = true;
@@ -162,7 +181,7 @@
 
   function collectInput() {
     const errors = [];
-    const algorithm = $("algorithm").value;
+    const algorithm = selectedAlgorithm();
     const processes = Array.from(rows.children, row => {
       const id = row.dataset.processId;
       const get = field => row.querySelector(`[data-field="${field}"]`);
@@ -170,7 +189,7 @@
         id,
         arrival: parseInput(get("arrival"), 0, 1000, "Arrival", errors),
         burst: parseInput(get("burst"), 1, 100, "Burst", errors),
-        priority: algorithm === "priority" ? parseInput(get("priority"), 1, 100, "Priority", errors) : Number(get("priority").value)
+        priority: algorithm === "priority" || algorithm === "priority-preemptive" ? parseInput(get("priority"), 1, 100, "Priority", errors) : Number(get("priority").value)
       };
     });
     const quantum = algorithm === "rr" ? parseInput($("quantum"), 1, 100, "Quantum", errors) : undefined;
@@ -335,8 +354,12 @@
     $("cpu-detail").textContent = frame.complete ? "All processes done" : active ? `${active.remaining.toFixed(1)} tu remaining` : "Waiting for arrival";
     $("playback-stage").classList.toggle("is-idle", !active && !frame.complete);
     $("cpu-core").style.setProperty("--cpu-color", active ? color(active.id)[2] : "#959eaf");
+    const preemptive = session.input.algorithm === "srtf" || session.input.algorithm === "priority-preemptive";
+    const interruption = frame.events.find(event => event.type === "preempt" && frame.segment && event.time === frame.segment.start);
+    $("preemption-note").hidden = !interruption;
+    $("preemption-note").textContent = interruption ? `↔ ${interruption.text}` : "";
     $("execution-caption").textContent = frame.complete ? "All processes have finished. Your final results are ready below." : active
-      ? `${active.id} is executing${session.input.algorithm === "rr" ? ` · ${(frame.segment.end - frame.time).toFixed(1)} tu left in this time slice` : " · runs to completion"}.`
+      ? `${active.id} is executing${session.input.algorithm === "rr" ? ` · ${(frame.segment.end - frame.time).toFixed(1)} tu left in this time slice` : preemptive ? " · can be interrupted by a better ready process" : " · runs to completion"}.`
       : `No process is ready. Next arrival at t = ${frame.segment.end}.`;
 
     const queueKey = `${frame.complete ? "done" : "live"}:${frame.ready.join(",")}`;
@@ -410,7 +433,7 @@
         scroller.scrollLeft = Math.max(0, x - scroller.clientWidth * 0.65);
       }
     }
-    if (segmentChanged) announce(frame.complete ? "Execution complete." : active ? `${active.id} is now running.` : "CPU is idle.");
+    if (segmentChanged) announce(frame.complete ? "Execution complete." : interruption ? interruption.text : active ? `${active.id} is now running.` : "CPU is idle.");
     session.segmentIndex = frame.segmentIndex;
   }
 
@@ -501,6 +524,7 @@
   window.addEventListener("scroll", () => { $("timeline-tooltip").hidden = true; }, true);
   window.addEventListener("resize", () => { $("timeline-tooltip").hidden = true; });
   $("algorithm").addEventListener("change", () => { invalidate(); updateAlgorithm(); });
+  $("mode-selector").addEventListener("change", () => { invalidate(); updateAlgorithm(); });
   $("add-process").addEventListener("click", () => {
     invalidate();
     const row = addRow();

@@ -96,6 +96,15 @@ input[aria-invalid=true] { border-color: var(--error); background: #fff7f8; }
 .algorithm-note p { margin: 0; font-size: 14px; line-height: 1.75; color: #635578; }
 .note-symbol { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 17px; height: 17px; margin-top: 4px; border: 1px solid currentColor; border-radius: 50%; font-size: 12px; font-weight: 650; line-height: 1; color: #796696; }
 .quantum-field { margin-bottom: 25px; max-width: 240px; }
+.mode-switch { margin: 19px 0 0; padding: 0; border: 0; min-width: 0; }
+.mode-switch legend { font-size: 14px; font-weight: 650; margin-bottom: 9px; padding: 0; }
+.mode-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.mode-option { display: flex; align-items: center; gap: 8px; padding: 11px 10px; min-height: 46px; border: 1px solid #d7ddeb; border-radius: 10px; background: #fafbfe; font-size: 14px; font-weight: 550; cursor: pointer; }
+.mode-option input { width: 16px; height: 16px; padding: 0; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
+.mode-option:has(input:checked) { border-color: #9a86df; color: #56408e; background: #eee8fb; }
+.mode-hint { font-size: 13px; color: var(--muted); margin: 11px 0 0; line-height: 1.75; }
+.preemption-note { font-size: 14px; line-height: 1.75; color: #87491d; background: #fff2e4; border: 1px solid #ecd3b5; border-radius: 10px; padding: 12px 14px; margin: 12px 0 0; }
+.activity-feed .activity-preempt>span:last-child { color: #97541f; font-weight: 600; }
 .subheading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .link-button { border: 0; background: none; padding: 6px 0; font-size: 14px; font-weight: 650; color: var(--accent); }
 .link-button:hover { text-decoration: underline; }
@@ -372,6 +381,7 @@ footer>span:first-child { font-weight: 650; }
   footer { flex-direction: column; gap: 8px; }
 }
 @media (max-width: 600px) {
+  .mode-options { grid-template-columns: 1fr; }
   .processor-scene { grid-template-columns: minmax(0, 1fr); gap: 15px; padding: 26px 0; }
   .ready-lane { width: 100%; }
   .lane-heading { font-size: 12px; }

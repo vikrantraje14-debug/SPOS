@@ -3,6 +3,7 @@
   "use strict";
 
   function create(processes, result, algorithm) {
+    const preemptive = algorithm === "srtf" || algorithm === "priority-preemptive";
     const arrivals = processes.map((p, order) => ({ ...p, order })).sort((a, b) => a.arrival - b.arrival || a.order - b.order);
     const byId = new Map(arrivals.map(p => [p.id, p]));
     const metrics = new Map(result.metrics.map(p => [p.id, p]));
@@ -22,14 +23,14 @@
       const checkpoint = { segment, queue: queue.slice(), nextArrival, used: { ...used } };
       if (segment.processId !== null) used[segment.processId] += segment.end - segment.start;
       enqueue(segment.end);
-      if (algorithm === "rr" && segment.processId !== null && used[segment.processId] < byId.get(segment.processId).burst) {
+      if ((algorithm === "rr" || preemptive) && segment.processId !== null && used[segment.processId] < byId.get(segment.processId).burst) {
         queue.push(segment.processId);
       }
       return checkpoint;
     });
 
     const events = arrivals.map(p => ({ time: p.arrival, rank: 1, type: "arrival", text: `${p.id} arrived in the ready queue.` }));
-    result.timeline.forEach(segment => {
+    result.timeline.forEach((segment, index) => {
       if (segment.processId === null) {
         events.push({ time: segment.start, rank: 3, type: "idle", text: "CPU is idle, waiting for the next arrival." });
         return;
@@ -37,7 +38,12 @@
       const id = segment.processId;
       events.push({ time: segment.start, rank: 3, type: "dispatch", text: `${id} was dispatched to the CPU.` });
       const complete = segment.end === metrics.get(id).completion;
-      events.push({ time: segment.end, rank: complete ? 0 : 2, type: complete ? "complete" : "rotate", text: complete ? `${id} completed its CPU burst.` : `${id}'s time slice ended; it returned to the queue.` });
+      const next = result.timeline[index + 1];
+      const type = complete ? "complete" : preemptive ? "preempt" : "rotate";
+      const text = complete ? `${id} completed its CPU burst.` : preemptive
+        ? `${id} was preempted by ${next.processId}; its remaining burst returned to the ready queue.`
+        : `${id}'s time slice ended; it returned to the queue.`;
+      events.push({ time: segment.end, rank: complete ? 0 : 2, type, text });
     });
     events.sort((a, b) => a.time - b.time || a.rank - b.rank);
     const eventTimes = [...new Set([0, ...events.map(event => event.time), duration])].sort((a, b) => a - b);
@@ -67,7 +73,10 @@
       if (algorithm !== "rr") ready.sort((aId, bId) => {
         const a = byId.get(aId), b = byId.get(bId);
         const tie = a.arrival - b.arrival || a.order - b.order;
-        return algorithm === "sjf" ? a.burst - b.burst || tie : algorithm === "priority" ? a.priority - b.priority || tie : tie;
+        if (algorithm === "srtf") return (a.burst - consumed[a.id]) - (b.burst - consumed[b.id]) || tie;
+        if (algorithm === "sjf") return a.burst - b.burst || tie;
+        if (algorithm === "priority" || algorithm === "priority-preemptive") return a.priority - b.priority || tie;
+        return tie;
       });
       const states = processes.map(p => ({
         id: p.id, burst: p.burst, used: consumed[p.id], remaining: Math.max(0, p.burst - consumed[p.id]),
