@@ -17,13 +17,13 @@
   </header>
   <main>
     <section class="intro" aria-labelledby="page-title">
-      <div><div class="eyebrow"><span class="status-dot"></span> THE OPERATING SYSTEMS LAB</div><h1 id="page-title">Every process.<br><span>In its own time.</span></h1><p class="intro-copy">Explore how the CPU makes its next move. Build a workload,<br class="desktop-break"> choose a scheduler, and follow every decision.</p></div>
+      <div><div class="eyebrow"><span class="status-dot"></span> THE OPERATING SYSTEMS LAB</div><h1 id="page-title">CPU scheduling,<br><span>made visual.</span></h1><p class="intro-copy">Build a workload. Watch every process run.<br class="desktop-break"> Understand the decisions behind the schedule.</p><div class="intro-chips" aria-label="Simulator features"><span>4 scheduling algorithms</span><span>Live process playback</span><span>No setup needed</span></div></div>
       <div class="intro-aside"><span class="mini-label">YOUR EXPERIMENT</span><p>One CPU.<br>Four ways to share it.</p><span class="offline-badge"><span class="status-dot"></span> Works entirely offline</span></div>
     </section>
 
     <div class="workspace">
       <section class="panel editor" aria-labelledby="setup-title">
-        <div class="panel-heading"><div><span class="step-label">01 / CONFIGURE</span><h2 id="setup-title">Set up your workload</h2></div><span class="count-badge" id="process-count">3 processes</span></div>
+        <div class="panel-heading"><div><span class="step-label">01 / CONFIGURE</span><h2 id="setup-title">Process setup</h2></div><span class="count-badge" id="process-count">3 processes</span></div>
         <form id="simulation-form" novalidate>
           <div class="field"><label for="algorithm">Scheduling algorithm</label><div class="select-wrap"><select id="algorithm" name="algorithm"><option value="fcfs">First Come, First Served</option><option value="sjf">Shortest Job First</option><option value="priority">Priority Scheduling</option><option value="rr">Round Robin</option></select></div></div>
           <div class="algorithm-note"><span class="note-symbol" aria-hidden="true">i</span><p id="algorithm-description"></p></div>
@@ -39,7 +39,7 @@
       </section>
 
       <section class="results-column" aria-labelledby="results-title">
-        <div class="results-heading"><div><span class="step-label">02 / OBSERVE</span><h2 id="results-title">See the schedule unfold</h2></div><span class="state-badge" id="result-state">Awaiting input</span></div>
+        <div class="results-heading"><div><span class="step-label">02 / OBSERVE</span><h2 id="results-title">Live execution</h2></div><span class="state-badge" id="result-state">Awaiting input</span></div>
         <div class="panel empty-state" id="empty-state"><div class="empty-illustration" aria-hidden="true"><div class="illustration-axis"></div><span class="illustration-block block-one">P1</span><span class="illustration-block block-two">P2</span><span class="illustration-block block-three">P3</span><span class="illustration-tick tick-one">0</span><span class="illustration-tick tick-two">t</span></div><span class="eyebrow">A LITTLE ORDER, A LOT OF INSIGHT</span><h3>Your CPU’s story starts here.</h3><p>Set your processes and run a simulation to see<br class="desktop-break"> the timeline, waiting times, and results.</p><span class="empty-hint">← Start with the example workload</span></div>
         <div id="results" hidden>
           <section class="panel playback-stage" id="playback-stage" aria-labelledby="playback-title">
