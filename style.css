@@ -384,7 +384,7 @@ footer>span:first-child { font-weight: 650; }
   .data-link span { left: -1px; top: 0; }
   .is-playing:not(.is-idle) .data-link span { animation-name: packet-flow-down; }
   .playback-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .transport-button { width: 100%; min-width: 0; }
+  .transport-button { width: 100%; min-width: 0; padding: 10px 8px; }
   .transport-button:first-child { min-width: 0; }
   .speed-control { font-size: 13px; justify-content: space-between; }
   .speed-control select { flex: 1; min-width: 0; max-width: 90px; }

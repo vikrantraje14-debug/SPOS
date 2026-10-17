@@ -6,6 +6,8 @@ A dependency-free SPOS mini-project built with HTML, CSS, and vanilla JavaScript
 
 Source repository: [vikrantraje14-debug/SPOS](https://github.com/vikrantraje14-debug/SPOS).
 
+Live simulator: [Open Dispatch](https://vikrantraje14-debug.github.io/SPOS/). [Run browser tests](https://vikrantraje14-debug.github.io/SPOS/tests.html).
+
 The project is ready for GitHub Pages without a build step. Use **Deploy from a branch**, branch **main**, folder **/ (root)**. The `.nojekyll` file makes this a plain static site. All asset links are relative so the site also works under the `/SPOS/` project path. Source updates pushed to the configured branch are published by GitHub Pages automatically once Pages is enabled.
 
 The local `Dispatch.zip` archive is excluded from Git; the actual website files and test suite are tracked directly.
@@ -104,7 +106,10 @@ The test page includes explicit timelines/metrics, scheduling tie cases, API val
 
 - Executed the engine and playback model test suite with Node.js: **62/62 checks passed**. The 17 playback checks cover partial progress, queue order, event boundaries, idle states, completion, seeking, and state consistency.
 - JavaScript syntax and local HTML/script/stylesheet references were checked separately.
-- Live browser verification was unavailable: the in-app browser rejected `file:` URLs under its security policy. Therefore desktop/mobile layout, real browser interactions, offline opening, and keyboard tooltips still require manual confirmation. No live browser pass is claimed.
+- The initial local-file preview was blocked. After GitHub Pages publication, the live test page also passed **62/62 checks** in the browser.
+- The typography redesign was inspected at 1440px desktop and 375px mobile viewports, with a fresh 320px narrow-screen check. Form inputs use 16px text, explanations use 14px, and playback controls are at least 44px tall. Main text, spacing, panels, and mobile controls were enlarged without changing scheduling logic.
+- Live interaction checks confirmed that Pause freezes playback, Next event advances while staying paused, final metrics stay hidden during execution, and Skip to results shows the expected FCFS average waiting time (3.33) and three process rows. Workload/algorithm changes clear old results. Wide input/result tables are contained in local scrolling regions.
+- Offline opening, exhaustive keyboard/assistive-technology checks, and reduced-motion preferences still need separate manual confirmation.
 
 Manual browser checklist:
 
