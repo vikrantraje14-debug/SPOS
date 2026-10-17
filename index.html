@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore FCFS, SJF, Priority and Round Robin with an offline CPU scheduling simulator.">
+  <title>Dispatch — CPU Scheduling Lab</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="scheduler.js" defer></script>
+  <script src="playback.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Dispatch home"><span class="brand-icon" aria-hidden="true">▥</span> dispatch<span class="brand-dot">.</span></a>
+    <div class="topbar-right"><span class="course-tag">SPOS MINI-PROJECT</span><a class="text-link" href="tests.html">Algorithm tests <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div><div class="eyebrow"><span class="status-dot"></span> THE OPERATING SYSTEMS LAB</div><h1 id="page-title">Every process.<br><span>In its own time.</span></h1><p class="intro-copy">Explore how the CPU makes its next move. Build a workload,<br class="desktop-break"> choose a scheduler, and follow every decision.</p></div>
+      <div class="intro-aside"><span class="mini-label">YOUR EXPERIMENT</span><p>One CPU.<br>Four ways to share it.</p><span class="offline-badge"><span class="status-dot"></span> Works entirely offline</span></div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel editor" aria-labelledby="setup-title">
+        <div class="panel-heading"><div><span class="step-label">01 / CONFIGURE</span><h2 id="setup-title">Set up your workload</h2></div><span class="count-badge" id="process-count">3 processes</span></div>
+        <form id="simulation-form" novalidate>
+          <div class="field"><label for="algorithm">Scheduling algorithm</label><div class="select-wrap"><select id="algorithm" name="algorithm"><option value="fcfs">First Come, First Served</option><option value="sjf">Shortest Job First</option><option value="priority">Priority Scheduling</option><option value="rr">Round Robin</option></select></div></div>
+          <div class="algorithm-note"><span class="note-symbol" aria-hidden="true">i</span><p id="algorithm-description"></p></div>
+          <div class="field quantum-field" id="quantum-field" hidden><label for="quantum">Time quantum <span class="muted">/ time units</span></label><input id="quantum" type="number" min="1" max="100" step="1" value="2" aria-describedby="quantum-error"><span class="field-error" id="quantum-error"></span></div>
+          <div class="subheading"><h3>Process queue</h3><button class="link-button" type="button" id="load-example">Load example</button></div>
+          <p class="table-help">Arrival and burst values are in time units.<span id="priority-help" hidden> Lower priority number runs first.</span></p>
+          <div class="table-scroll"><table class="input-table"><thead><tr><th scope="col">Process</th><th scope="col">Arrival</th><th scope="col">Burst</th><th scope="col" class="priority-column" hidden>Priority</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody id="process-rows"></tbody></table></div>
+          <button class="add-button" type="button" id="add-process"><span aria-hidden="true">＋</span> Add process <span class="add-limit">up to 20</span></button>
+          <p class="form-message" id="form-message" role="alert"></p>
+          <div class="form-actions"><button type="submit" class="primary-button"><span id="run-label">Run simulation</span> <span aria-hidden="true">→</span></button><button type="button" class="secondary-button" id="reset">Reset</button></div>
+        </form>
+        <div class="limits-note"><span class="note-symbol" aria-hidden="true">i</span><p><strong>Keep the experiment focused.</strong> 1–20 processes · arrival 0–1000 · burst 1–100 · priority and quantum 1–100. All values must be whole numbers.</p></div>
+      </section>
+
+      <section class="results-column" aria-labelledby="results-title">
+        <div class="results-heading"><div><span class="step-label">02 / OBSERVE</span><h2 id="results-title">See the schedule unfold</h2></div><span class="state-badge" id="result-state">Awaiting input</span></div>
+        <div class="panel empty-state" id="empty-state"><div class="empty-illustration" aria-hidden="true"><div class="illustration-axis"></div><span class="illustration-block block-one">P1</span><span class="illustration-block block-two">P2</span><span class="illustration-block block-three">P3</span><span class="illustration-tick tick-one">0</span><span class="illustration-tick tick-two">t</span></div><span class="eyebrow">A LITTLE ORDER, A LOT OF INSIGHT</span><h3>Your CPU’s story starts here.</h3><p>Set your processes and run a simulation to see<br class="desktop-break"> the timeline, waiting times, and results.</p><span class="empty-hint">← Start with the example workload</span></div>
+        <div id="results" hidden>
+          <section class="panel playback-stage" id="playback-stage" aria-labelledby="playback-title">
+            <div class="playback-heading"><div><span class="live-label" id="live-label"><span></span> LIVE EXECUTION</span><h3 id="playback-title">Inside the scheduler</h3></div><div class="sim-clock"><span>SIMULATED TIME</span><strong id="sim-clock">0.0 <small>tu</small></strong></div></div>
+            <div class="processor-scene">
+              <div class="ready-lane"><div class="lane-heading"><span>READY QUEUE</span><span id="ready-count">0 waiting</span></div><div id="ready-queue" class="ready-queue"></div><p class="lane-note" id="queue-note">Next process first →</p></div>
+              <div class="data-link" aria-hidden="true"><span></span><span></span><span></span></div>
+              <div class="cpu-shell"><div class="cpu-orbit" aria-hidden="true"></div><div class="cpu-core" id="cpu-core"><span>CPU / 01</span><strong id="cpu-process">Idle</strong><small id="cpu-detail">Waiting for arrival</small></div></div>
+            </div>
+            <div class="execution-caption"><span class="execution-dot" aria-hidden="true"></span><p id="execution-caption">Getting the workload ready…</p></div>
+            <div class="playback-progress"><div id="playback-progress" role="progressbar" aria-label="Simulation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+            <div class="playback-stats"><span id="completed-count">0 completed</span><span id="playback-fraction">0 / 0 time units</span></div>
+            <div class="playback-controls"><button type="button" id="pause-playback" class="transport-button">Ⅱ Pause</button><button type="button" id="step-playback" class="transport-button">Next event →</button><label class="speed-control" for="playback-speed">Speed<select id="playback-speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option><option value="16">16×</option></select></label><button type="button" id="finish-playback" class="finish-button">Skip to results ↗</button></div>
+            <div class="process-board-heading"><h4>Process monitor</h4><span>Arrival → Ready → CPU → Done</span></div><div id="process-board" class="process-board"></div>
+            <details class="activity-details" open><summary>Scheduler activity <span>latest 5 events</span></summary><ol id="activity-feed" class="activity-feed" aria-label="Recent scheduler events"></ol></details>
+          </section>
+          <div class="completion-banner" id="completion-banner" hidden><span class="completion-check" aria-hidden="true">✓</span><div><strong>Workload complete.</strong><p>Every process has finished. Here’s how your scheduler performed.</p></div></div>
+          <div class="metric-grid" id="summary-metrics" hidden><article class="metric-card"><span>Avg. waiting time</span><div><strong id="avg-waiting">0.00</strong><span>units</span></div><p>Time spent in the ready queue</p></article><article class="metric-card"><span>Avg. turnaround</span><div><strong id="avg-turnaround">0.00</strong><span>units</span></div><p>From arrival to completion</p></article><article class="metric-card"><span>Avg. response time</span><div><strong id="avg-response">0.00</strong><span>units</span></div><p>Until the first CPU allocation</p></article></div>
+          <section class="panel timeline-panel" aria-labelledby="timeline-title"><div class="section-heading"><div><h3 id="timeline-title">Execution timeline</h3><p>Watch each allocation fill as the CPU runs.</p></div><span class="small-tag" id="algorithm-tag"></span></div><div class="gantt-scroll" tabindex="0" role="region" aria-label="Scrollable execution timeline"><div id="gantt" class="gantt"></div></div><div class="timeline-footer"><div class="legend" id="legend"></div><label class="follow-control"><input type="checkbox" id="follow-cpu" checked> Follow CPU</label></div><p class="chart-help">Hover or focus a visible block for details. Pause to inspect. Use Next event to jump across idle gaps.</p></section>
+          <section class="panel metrics-panel" id="final-breakdown" hidden aria-labelledby="metrics-title"><div class="section-heading"><div><h3 id="metrics-title">Process breakdown</h3><p>Results in your original process order.</p></div></div><div class="table-scroll"><table class="metrics-table"><thead><tr><th scope="col">Process</th><th scope="col">Arrival</th><th scope="col">Burst</th><th scope="col">First start</th><th scope="col">Completion</th><th scope="col">Turnaround</th><th scope="col">Waiting</th><th scope="col">Response</th></tr></thead><tbody id="metrics-body"></tbody></table></div></section>
+        </div>
+        <section class="assumptions" aria-labelledby="model-title"><span class="model-icon" aria-hidden="true">▧</span><div><h3 id="model-title">A simple model. Clearer understanding.</h3><p>Single CPU · one burst per process · no I/O · zero context-switch cost · no priority aging. SJF and Priority run each selected process to completion.</p></div></section>
+      </section>
+    </div>
+    <section class="formula-strip" aria-label="Metric formulas"><div><span class="formula-label">TURNAROUND</span><p>Completion − Arrival</p></div><div><span class="formula-label">WAITING</span><p>Turnaround − Burst</p></div><div><span class="formula-label">RESPONSE</span><p>First start − Arrival</p></div><span class="formula-caption">The numbers behind<br>every scheduling decision.</span></section>
+  </main>
+  <footer><span>dispatch. <span class="muted">/ CPU Scheduling Simulator</span></span><span>Built for learning. Ready for your next experiment.</span></footer>
+  <div id="timeline-tooltip" class="timeline-tooltip" role="tooltip" hidden></div>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>
