@@ -119,9 +119,10 @@ The test page includes explicit timelines/metrics, scheduling tie cases, API val
 
 - Executed the expanded engine and playback model test suite with Node.js: **90/90 checks passed**. It includes repeated preemptions, equal-key non-interruption, remaining-time queue order, resumption, nested Priority interruptions, completion/arrival boundaries, and the original non-preemptive/Round Robin regressions.
 - JavaScript syntax and local HTML/script/stylesheet references were checked separately.
-- The initial local-file preview was blocked. After GitHub Pages publication, the live test page also passed **62/62 checks** in the browser.
+- The initial local-file preview was blocked. After GitHub Pages publication, the expanded live test page passed **90/90 checks** in the browser, with no reported console errors.
 - The typography redesign was inspected at 1440px desktop and 375px mobile viewports, with a fresh 320px narrow-screen check. Form inputs use 16px text, explanations use 14px, and playback controls are at least 44px tall. Main text, spacing, panels, and mobile controls were enlarged without changing scheduling logic.
 - Live interaction checks confirmed that Pause freezes playback, Next event advances while staying paused, final metrics stay hidden during execution, and Skip to results shows the expected FCFS average waiting time (3.33) and three process rows. Workload/algorithm changes clear old results. Wide input/result tables are contained in local scrolling regions.
+- Live preemption checks confirmed SRTF interruptions at t=1 and t=2, the matching CPU/queue/notice, and average waiting time 1.67 versus 2.67 for non-preemptive SJF. Preemptive Priority produced average waiting time 3.00. Mode changes cleared playback; Load Example retained mode; Reset restored defaults. The mode controls were checked at desktop and 375px mobile viewport sizes without page overflow.
 - Offline opening, exhaustive keyboard/assistive-technology checks, and reduced-motion preferences still need separate manual confirmation.
 
 Manual browser checklist:
